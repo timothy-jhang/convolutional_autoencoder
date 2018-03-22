@@ -1,6 +1,6 @@
 
 #
-#   my_nn_lib.py
+#   my_nn_lib.py (based on tomokishii's work)
 #       date. 5/19/2016
 #
 
