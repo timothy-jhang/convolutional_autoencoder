@@ -1,9 +1,10 @@
 #
-# autoencoder convolutional   
+# autoencoder convolutional   (tensorflow version)
 # 2018.03.21.
 # caffe version -> tensorflow  (v1)
-# Caffe version : A Deep Convolutional Auto-Encoder with Pooling - Unpooling Layers in Caffe (Volodymyr Turchenko, Eric Chalmers, Artur Luczak)
+# Caffe version (paper): A Deep Convolutional Auto-Encoder with Pooling - Unpooling Layers in Caffe (Volodymyr Turchenko, Eric Chalmers, Artur Luczak)
 # caffe version has no detailed connection from full connected layer to the next deconv. layer, so I added image resizing
+# caffe version (website) : https://groups.google.com/forum/#!topic/caffe-users/GhrCtONcRxY
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
