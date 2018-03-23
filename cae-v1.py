@@ -10,9 +10,9 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
-#import matplotlib as mpl
-#mpl.use('Agg')
-#import matplotlib.pyplot as plt
+import matplotlib as mpl
+mpl.use('Agg')
+import matplotlib.pyplot as plt
 import tensorflow as tf
 
 from tensorflow.examples.tutorials.mnist import input_data
@@ -20,46 +20,6 @@ from my_nn_lib import Convolution2D, MaxPooling2D
 from my_nn_lib import FullConnected, ReadOutLayer
 
 
-# Up-sampling 2-D Layer (deconvolutoinal Layer)
-class Conv2Dtranspose(object):
-    '''
-      constructor's args:
-          input      : input image (2D matrix)
-          output_siz : output image size
-          in_ch      : number of incoming image channel
-          out_ch     : number of outgoing image channel
-          patch_siz  : filter(patch) size
-    '''
-    def __init__(self, input, output_siz, in_ch, out_ch, patch_siz, activation='sigmoid',stride=1):
-        self.input = input      
-        self.rows = output_siz[0]
-        self.cols = output_siz[1]
-        self.out_ch = out_ch
-        self.activation = activation
-        
-        wshape = [patch_siz[0], patch_siz[1], out_ch, in_ch]    # note the arguments order
-	        
-        w_cvt = tf.Variable(tf.truncated_normal(wshape, stddev=0.1), 
-                            trainable=True)
-        b_cvt = tf.Variable(tf.constant(0.1, shape=[out_ch]), 
-                            trainable=True)
-        self.batsiz = tf.shape(input)[0]
-        self.w = w_cvt
-        self.b = b_cvt
-        self.params = [self.w, self.b]
-        self.s = stride 
-    def output(self):
-        shape4D = [self.batsiz, self.rows, self.cols, self.out_ch]      
-        linout = tf.nn.conv2d_transpose(value=self.input, filter=self.w, output_shape=shape4D,
-			strides=[1, self.s, self.s, 1]) + self.b
-        if self.activation == 'relu':
-            self.output = tf.nn.relu(linout)
-        elif self.activation == 'sigmoid':
-            self.output = tf.sigmoid(linout)
-        else:
-            self.output = linout
-	print('w=',self.w.shape,'output_shape=',self.batsiz,self.rows,self.cols,self.out_ch,'Conv2DTr-shape-',self.output.shape)        
-        return self.output
 
 # Create the model
 def model(X, w_e, b_e, w_d, b_d):
@@ -124,11 +84,16 @@ def mk_nn_model(x, y_):
     decoded = tf.reshape(decoded, [-1, 784])
     cross_entropy = -1. *x *tf.log(decoded) - (1. - x) *tf.log(1. - decoded)
     loss = tf.reduce_mean(cross_entropy)
-    # accuracy
+
+    # crossentry for  classifier
     cross_entropy_acc = tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=fo_out)
     lossacc = tf.reduce_mean(cross_entropy_acc)
 
-    return loss, decoded, lossacc, fo_out
+    # accuracy of the trained model, between 0 (worst) and 1 (best)
+    correct_prediction = tf.equal(tf.argmax(fo_out, 1), tf.argmax(y_, 1))
+    accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+
+    return loss, decoded, lossacc, fo_out, accuracy
 
 
 if __name__ == '__main__':
@@ -137,17 +102,17 @@ if __name__ == '__main__':
     x = tf.placeholder(tf.float32, [None, 784])
     y_ = tf.placeholder(tf.float32, [None, 10]) 
 
-    loss, decoded, lossacc, ro = mk_nn_model(x, y_)
+    loss, decoded, lossacc, ro, accuracy = mk_nn_model(x, y_)
     train_step = tf.train.AdagradOptimizer(0.1).minimize(loss)
 
     acc_step = tf.train.AdagradOptimizer(0.1).minimize(lossacc)
 
     init = tf.global_variables_initializer()
-    # Train Conv autoencoder
+    # Train Conv autoencoder - Pre-traning
     with tf.Session() as sess:
         sess.run(init)
         print('Training Conv. Autoencoder...')
-        for i in range(10001):
+        for i in range(30001):
             batch_xs, batch_ys = mnist.train.next_batch(128)
             train_step.run({x: batch_xs, y_: batch_ys})
             if i % 1000 == 0:
@@ -159,61 +124,69 @@ if __name__ == '__main__':
         decoded_imgs = decoded.eval(test_fd)
         print('loss (test) = ', loss.eval(test_fd))
 	print('-------------------------------------------')
-        print('loss acc=', lossacc.eval(test_fd))
+        print('loss (classifier)=', lossacc.eval(test_fd))
+        print('accuracy (classifier)=', accuracy.eval(test_fd))
 	t = ro.eval(test_fd)
         print('ro =', t)
         print('ro.shape =', t.shape)
 
 	# Save model weights to disk
 	saver = tf.train.Saver()
-	save_path = saver.save(sess, './model/model.ckt')
-	print("Model saved in file: %s" % save_path)
+	save_path = saver.save(sess, './model/pretrained-model.ckt')
+	print("Pre-trained Model saved in file: %s" % save_path)
 
+    # Fine Tuning of Classifier
     print("Fine Tuning weights for classification tasks...")
     with tf.Session() as sess:
     	# Initialize variables
     	sess.run(init)
     	# Restore model weights from previously saved model
     	saver.restore(sess, './model/model.ckt')
-    	print("Model restored from file: %s" % save_path)
-        print('Accuracy...')
-        for i in range(10001):
+    	print("Trained Model restored from file: %s" % save_path)
+        for i in range(30001):
             batch_xs, batch_ys = mnist.train.next_batch(128)
             acc_step.run({x: batch_xs, y_: batch_ys})
             if i % 1000 == 0:
-                train_acc= lossacc.eval({x: batch_xs, y_: batch_ys})
-                print('  step, acc = ',i, train_acc)
+                train_loss= lossacc.eval({x: batch_xs, y_: batch_ys})
+                train_acc= accuracy.eval({x: batch_xs, y_: batch_ys})
+                print('  step, loss, accuracy = ',i, train_loss, train_acc)
 
         # generate decoded image with test data
         test_fd = {x: mnist.test.images, y_: mnist.test.labels}
         ro_imgs = ro.eval(test_fd)
-        print('lossacc (test) = ', lossacc.eval(test_fd))
+        print('cross entry loss (test) = ', lossacc.eval(test_fd))
+        print('accuracy (test) = ', accuracy.eval(test_fd))
         print('ro_imgs = ', ro_imgs[0], ro_imgs[0].shape)
 
+	# Save classifier model weights to disk
+	saver1 = tf.train.Saver()
+	save_path1 = saver.save(sess, './model/classifier-model.ckt')
+	print("Classifier Model saved in file: %s" % save_path)
  
-#    x_test = mnist.test.images
-#    n = 10  # how many digits we will display
-#    plt.figure(figsize=(20, 4))
-#    for i in range(n):
+    x_test = mnist.test.images
+    n = 10  # how many digits we will display
+    plt.figure(figsize=(20, 4))
+    for i in range(n):
 #        # display original
-##        ax = plt.subplot(2, n, i + 1)
-#        plt.imshow(x_test[i].reshape(28, 28))
-#        plt.gray()
-#        ax.get_xaxis().set_visible(False)
-#        ax.get_yaxis().set_visible(False)
-#
+        ax = plt.subplot(2, n, i + 1)
+        plt.imshow(x_test[i].reshape(28, 28))
+        plt.gray()
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+ 
 #        # display reconstruction
-#        ax = plt.subplot(2, n, i + 1 + n)
-#        plt.imshow(decoded_imgs[i].reshape(28, 28))
-#        plt.gray()
-#        ax.get_xaxis().set_visible(False)
-#        ax.get_yaxis().set_visible(False)
+        ax = plt.subplot(2, n, i + 1 + n)
+        plt.imshow(decoded_imgs[i].reshape(28, 28))
+        plt.gray()
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
 #
 #    #plt.show()
-#    plt.savefig('mnist_ae2.png')
+    plt.savefig('mnist_ae2.png')
 
     x_test = mnist.test.images
     n = 10  # how many digits we will display
+#    just print out
 #    plt.figure(figsize=(20, 4))
     for i in range(n):
         # display original
@@ -228,7 +201,7 @@ if __name__ == '__main__':
 # ro_imgs : numbers - print i or ??
 #        plt.imshow(ro_imgs[i].reshape(28, 28))
 #        plt.gray()
-	print('i=',i,np.argmax(ro_imgs[i]),ro_imgs[i])
+	print('i=',i,np.argmax(ro_imgs[i]))
 #	ax.text(3,8,ro_imgs[i], fontsize=15)
 #        ax.get_xaxis().set_visible(False)
 #        ax.get_yaxis().set_visible(False)
