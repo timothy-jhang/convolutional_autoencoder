@@ -24,7 +24,7 @@ class Conv2Dtranspose(object):
           out_ch     : number of outgoing image channel
           patch_siz  : filter(patch) size
     '''
-    def __init__(self, input, output_siz, in_ch, out_ch, patch_siz, activation='sigmoid',stride=1):
+    def __init__(self, input, output_siz, in_ch, out_ch, patch_siz, activation='sigmoid',S=1):
         self.input = input      
         self.rows = output_siz[0]
         self.cols = output_siz[1]
@@ -41,7 +41,7 @@ class Conv2Dtranspose(object):
         self.w = w_cvt
         self.b = b_cvt
         self.params = [self.w, self.b]
-        self.s = stride 
+        self.s = S 
     def output(self):
         shape4D = [self.batsiz, self.rows, self.cols, self.out_ch]      
         linout = tf.nn.conv2d_transpose(value=self.input, filter=self.w, output_shape=shape4D,
