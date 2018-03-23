@@ -14,6 +14,46 @@ import numpy as np
 # import cv2
 import tensorflow as tf
 
+# Up-sampling 2-D Layer (deconvolutoinal Layer)
+class Conv2Dtranspose(object):
+    '''
+      constructor's args:
+          input      : input image (2D matrix)
+          output_siz : output image size
+          in_ch      : number of incoming image channel
+          out_ch     : number of outgoing image channel
+          patch_siz  : filter(patch) size
+    '''
+    def __init__(self, input, output_siz, in_ch, out_ch, patch_siz, activation='sigmoid',stride=1):
+        self.input = input      
+        self.rows = output_siz[0]
+        self.cols = output_siz[1]
+        self.out_ch = out_ch
+        self.activation = activation
+        
+        wshape = [patch_siz[0], patch_siz[1], out_ch, in_ch]    # note the arguments order
+	        
+        w_cvt = tf.Variable(tf.truncated_normal(wshape, stddev=0.1), 
+                            trainable=True)
+        b_cvt = tf.Variable(tf.constant(0.1, shape=[out_ch]), 
+                            trainable=True)
+        self.batsiz = tf.shape(input)[0]
+        self.w = w_cvt
+        self.b = b_cvt
+        self.params = [self.w, self.b]
+        self.s = stride 
+    def output(self):
+        shape4D = [self.batsiz, self.rows, self.cols, self.out_ch]      
+        linout = tf.nn.conv2d_transpose(value=self.input, filter=self.w, output_shape=shape4D,
+			strides=[1, self.s, self.s, 1]) + self.b
+        if self.activation == 'relu':
+            self.output = tf.nn.relu(linout)
+        elif self.activation == 'sigmoid':
+            self.output = tf.sigmoid(linout)
+        else:
+            self.output = linout
+	print('w=',self.w.shape,'output_shape=',self.batsiz,self.rows,self.cols,self.out_ch,'Conv2DTr-shape-',self.output.shape)        
+        return self.output
 
 # Convolution 2-D Layer
 class Convolution2D(object):
