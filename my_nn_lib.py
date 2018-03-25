@@ -107,15 +107,15 @@ class MaxPooling2D(object):
           input  : input image (2D matrix)
           ksize  : pooling patch size
     '''
-    def __init__(self, input, ksize=None):
+    def __init__(self, input, ksize=None, S=2):
         self.input = input
         if ksize == None:
             ksize = [1, 2, 2, 1]
-            self.ksize = ksize
-    
+	    self.ksize = ksize
+        self.s = S
     def output(self):
         self.output = tf.nn.max_pool(self.input, ksize=self.ksize,
-                    strides=[1, 2, 2, 1], padding='SAME')
+                    strides=[1, self.s, self.s, 1], padding='SAME')
  	print('maxpool-shape=',self.output.shape) 
         return self.output
 
