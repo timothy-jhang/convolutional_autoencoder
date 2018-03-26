@@ -157,7 +157,7 @@ if __name__ == '__main__':
 	saver1 = tf.train.Saver(max_to_keep=5)
 	best_acc = 0.0
 #    	print("Trained Model restored from file: %s" % save_path)
-        for i in range(30001):
+        for i in range(50001):
             batch_xs, batch_ys = mnist.train.next_batch(128)
             acc_step.run({x: batch_xs, y_: batch_ys})
             if i % 1000 == 0:

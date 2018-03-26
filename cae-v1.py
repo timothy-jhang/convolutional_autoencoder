@@ -16,12 +16,12 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 
 from tensorflow.examples.tutorials.mnist import input_data
-from my_nn_lib import Convolution2D, MaxPooling2D
+from my_nn_lib import Convolution2D, MaxPooling2D, Conv2Dtranspose
 from my_nn_lib import FullConnected, ReadOutLayer
 
 
 
-# Create the model
+# Create the model the most simple autoencoder
 def model(X, w_e, b_e, w_d, b_d):
     encoded = tf.sigmoid(tf.matmul(X, w_e) + b_e)
     decoded = tf.sigmoid(tf.matmul(encoded, w_d) + b_d)
@@ -112,7 +112,7 @@ if __name__ == '__main__':
     with tf.Session() as sess:
         sess.run(init)
         print('Training Conv. Autoencoder...')
-        for i in range(30001):
+        for i in range(50001):
             batch_xs, batch_ys = mnist.train.next_batch(128)
             train_step.run({x: batch_xs, y_: batch_ys})
             if i % 1000 == 0:
@@ -143,7 +143,7 @@ if __name__ == '__main__':
     	# Restore model weights from previously saved model
     	saver.restore(sess, './model/model.ckt')
     	print("Trained Model restored from file: %s" % save_path)
-        for i in range(30001):
+        for i in range(50001):
             batch_xs, batch_ys = mnist.train.next_batch(128)
             acc_step.run({x: batch_xs, y_: batch_ys})
             if i % 1000 == 0:

@@ -111,7 +111,7 @@ class MaxPooling2D(object):
         self.input = input
         if ksize == None:
             ksize = [1, 2, 2, 1]
-	    self.ksize = ksize
+	self.ksize = ksize
         self.s = S
     def output(self):
         self.output = tf.nn.max_pool(self.input, ksize=self.ksize,
